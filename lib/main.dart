@@ -14,6 +14,7 @@ import 'screens/settings/settings_screen.dart';
 import 'screens/auth/auth_screen.dart';
 import 'screens/auth/onboarding_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -21,11 +22,12 @@ void main() async {
   final prefs = await SharedPreferences.getInstance();
   final hasSeenOnboarding = prefs.getBool('has_seen_onboarding') ?? false;
 
-  // Initialize Supabase (hardcoded for testing — move to config later)
+  await dotenv.load(fileName: ".env");
+
+  // Initialize Supabase
   await Supabase.initialize(
-    url: 'https://alrvuuoaqnbvkbwtizch.supabase.co',
-    publishableKey:
-        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFscnZ1dW9hcW5idmtid3RpemNoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE2MjMzNTIsImV4cCI6MjA5NzE5OTM1Mn0.wC_vCS1GEg8dPUZlkPecvAELfGFBCZAFBmZtf73OHgg',
+    url: dotenv.env['SUPABASE_URL']!,
+    publishableKey: dotenv.env['SUPABASE_ANON_KEY']!,
   );
 
   // Initialize foreground task
