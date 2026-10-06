@@ -1,59 +1,83 @@
 import 'package:flutter/material.dart';
 
 class AppColors {
-  // Primary palette
-  static const Color primary = Color(0xFF6C5CE7);
-  static const Color primaryLight = Color(0xFF9B8FFF);
-  static const Color primaryDark = Color(0xFF4A3DB5);
+  // Primary palette — refined violet-indigo
+  static const Color primary = Color(0xFF7C5CFC);
+  static const Color primaryLight = Color(0xFFAB94FF);
+  static const Color primaryDark = Color(0xFF5A3FD4);
 
-  // Accent colors
-  static const Color accent = Color(0xFF00D2FF);
-  static const Color accentGreen = Color(0xFF00E676);
-  static const Color accentOrange = Color(0xFFFF9100);
-  static const Color accentRed = Color(0xFFFF5252);
+  // Accent colors — vibrant neon accents
+  static const Color accent = Color(0xFF00D4FF);
+  static const Color accentGreen = Color(0xFF00E68A);
+  static const Color accentOrange = Color(0xFFFFAB40);
+  static const Color accentRed = Color(0xFFFF5C7C);
 
-  // Background colors
-  static const Color background = Color(0xFF0F0F1A);
-  static const Color surface = Color(0xFF1A1A2E);
-  static const Color surfaceLight = Color(0xFF252542);
-  static const Color surfaceCard = Color(0xFF1E1E36);
+  // Background — deep navy with subtle warmth
+  static const Color background = Color(0xFF0B0D1A);
+  static const Color surface = Color(0xFF141627);
+  static const Color surfaceLight = Color(0xFF1D2038);
+  static const Color surfaceCard = Color(0xFF181B30);
+  static const Color surfaceElevated = Color(0xFF232745);
 
-  // Text colors
-  static const Color textPrimary = Color(0xFFF0F0F5);
-  static const Color textSecondary = Color(0xFF9494B8);
-  static const Color textMuted = Color(0xFF6B6B8D);
+  // Text colors — better contrast hierarchy
+  static const Color textPrimary = Color(0xFFF2F2FA);
+  static const Color textSecondary = Color(0xFF9D9DBF);
+  static const Color textMuted = Color(0xFF5E5E85);
 
   // Status colors
-  static const Color statusAtWilaya = Color(0xFF00D2FF);
-  static const Color statusOutDelivery = Color(0xFFFFB300);
-  static const Color statusDelivered = Color(0xFF00E676);
-  static const Color statusFailed = Color(0xFFFF5252);
-  static const Color statusPending = Color(0xFF9494B8);
+  static const Color statusAtWilaya = Color(0xFF00D4FF);
+  static const Color statusOutDelivery = Color(0xFFFFAB40);
+  static const Color statusDelivered = Color(0xFF00E68A);
+  static const Color statusFailed = Color(0xFFFF5C7C);
+  static const Color statusPending = Color(0xFF9D9DBF);
 
-  // Gradients
+  // Gradients — richer, more sophisticated
   static const LinearGradient primaryGradient = LinearGradient(
-    colors: [Color(0xFF6C5CE7), Color(0xFF00D2FF)],
+    colors: [Color(0xFF7C5CFC), Color(0xFF4F9DFF)],
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+  );
+
+  static const LinearGradient heroGradient = LinearGradient(
+    colors: [Color(0xFF7C5CFC), Color(0xFF00D4FF)],
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
   );
 
   static const LinearGradient cardGradient = LinearGradient(
-    colors: [Color(0xFF1E1E36), Color(0xFF252542)],
+    colors: [Color(0xFF181B30), Color(0xFF1D2038)],
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+  );
+
+  static const LinearGradient glassGradient = LinearGradient(
+    colors: [Color(0x12FFFFFF), Color(0x06FFFFFF)],
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
   );
 
   static const LinearGradient successGradient = LinearGradient(
-    colors: [Color(0xFF00E676), Color(0xFF00C853)],
+    colors: [Color(0xFF00E68A), Color(0xFF00C06A)],
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
   );
 
   static const LinearGradient warningGradient = LinearGradient(
-    colors: [Color(0xFFFFB300), Color(0xFFFF9100)],
+    colors: [Color(0xFFFFAB40), Color(0xFFFF8F00)],
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
   );
+
+  static const LinearGradient dangerGradient = LinearGradient(
+    colors: [Color(0xFFFF5C7C), Color(0xFFFF3860)],
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+  );
+
+  // Glow colors for ambient effects
+  static const Color glowPrimary = Color(0x337C5CFC);
+  static const Color glowAccent = Color(0x3300D4FF);
+  static const Color glowGreen = Color(0x3300E68A);
 }
 
 class AppTheme {
@@ -78,23 +102,26 @@ class AppTheme {
           fontSize: 28,
           fontWeight: FontWeight.w800,
           color: AppColors.textPrimary,
-          letterSpacing: -0.5,
+          letterSpacing: -0.8,
+          height: 1.2,
         ),
         headlineMedium: TextStyle(
           fontSize: 22,
           fontWeight: FontWeight.w700,
           color: AppColors.textPrimary,
-          letterSpacing: -0.3,
+          letterSpacing: -0.5,
         ),
         headlineSmall: TextStyle(
           fontSize: 18,
           fontWeight: FontWeight.w600,
           color: AppColors.textPrimary,
+          letterSpacing: -0.3,
         ),
         titleLarge: TextStyle(
           fontSize: 16,
           fontWeight: FontWeight.w600,
           color: AppColors.textPrimary,
+          letterSpacing: -0.2,
         ),
         titleMedium: TextStyle(
           fontSize: 14,
@@ -105,11 +132,13 @@ class AppTheme {
           fontSize: 15,
           fontWeight: FontWeight.w400,
           color: AppColors.textPrimary,
+          height: 1.5,
         ),
         bodyMedium: TextStyle(
           fontSize: 13,
           fontWeight: FontWeight.w400,
           color: AppColors.textSecondary,
+          height: 1.4,
         ),
         bodySmall: TextStyle(
           fontSize: 11,
@@ -120,7 +149,7 @@ class AppTheme {
           fontSize: 14,
           fontWeight: FontWeight.w600,
           color: AppColors.textPrimary,
-          letterSpacing: 0.5,
+          letterSpacing: 0.3,
         ),
         labelMedium: TextStyle(
           fontSize: 12,
@@ -144,7 +173,7 @@ class AppTheme {
         color: AppColors.surfaceCard,
         elevation: 0,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(20),
         ),
         margin: EdgeInsets.zero,
       ),
@@ -159,35 +188,39 @@ class AppTheme {
         filled: true,
         fillColor: AppColors.surfaceLight,
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(14),
           borderSide: BorderSide.none,
         ),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide.none,
+          borderRadius: BorderRadius.circular(14),
+          borderSide: BorderSide(
+            color: Colors.white.withValues(alpha: 0.04),
+            width: 1,
+          ),
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(14),
           borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
         ),
         hintStyle: const TextStyle(
           color: AppColors.textMuted,
           fontSize: 14,
         ),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
           backgroundColor: AppColors.primary,
           foregroundColor: Colors.white,
           elevation: 0,
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+          padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 16),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(14),
           ),
           textStyle: const TextStyle(
             fontSize: 15,
             fontWeight: FontWeight.w600,
+            letterSpacing: 0.3,
           ),
         ),
       ),
@@ -203,6 +236,9 @@ class AppTheme {
             return AppColors.primary.withValues(alpha: 0.3);
           }
           return AppColors.surfaceLight;
+        }),
+        trackOutlineColor: WidgetStateProperty.resolveWith((states) {
+          return Colors.transparent;
         }),
       ),
     );

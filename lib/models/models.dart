@@ -14,6 +14,92 @@ enum SmsStatus {
   failed,
 }
 
+/// Maps Yalidine status strings to our event types
+WebhookEventType mapEventType(String? eventType) {
+  switch (eventType) {
+    case 'atWilaya':
+      return WebhookEventType.atWilaya;
+    case 'outForDelivery':
+      return WebhookEventType.outForDelivery;
+    case 'delivered':
+      return WebhookEventType.delivered;
+    case 'returned':
+      return WebhookEventType.returned;
+    default:
+      return WebhookEventType.unknown;
+  }
+}
+
+/// Maps SmsStatus from string
+SmsStatus mapSmsStatus(String? status) {
+  switch (status) {
+    case 'sent':
+      return SmsStatus.sent;
+    case 'failed':
+      return SmsStatus.failed;
+    default:
+      return SmsStatus.pending;
+  }
+}
+
+/// Raw webhook event from sms_webhook_events table
+class WebhookEvent {
+  final String id;
+  final String? eventId;
+  final String? eventType;
+  final String tracking;
+  final String? status;
+  final String? reason;
+  final String? customerName;
+  final String? phoneNumber;
+  final String? wilaya;
+  final String? commune;
+  final String? orderId;
+  final bool processed;
+  final DateTime? occurredAt;
+  final DateTime createdAt;
+
+  const WebhookEvent({
+    required this.id,
+    this.eventId,
+    this.eventType,
+    required this.tracking,
+    this.status,
+    this.reason,
+    this.customerName,
+    this.phoneNumber,
+    this.wilaya,
+    this.commune,
+    this.orderId,
+    this.processed = false,
+    this.occurredAt,
+    required this.createdAt,
+  });
+
+  factory WebhookEvent.fromJson(Map<String, dynamic> json) {
+    return WebhookEvent(
+      id: json['id'] as String,
+      eventId: json['event_id'] as String?,
+      eventType: json['event_type'] as String?,
+      tracking: json['tracking'] as String,
+      status: json['status'] as String?,
+      reason: json['reason'] as String?,
+      customerName: json['customer_name'] as String?,
+      phoneNumber: json['phone_number'] as String?,
+      wilaya: json['wilaya'] as String?,
+      commune: json['commune'] as String?,
+      orderId: json['order_id'] as String?,
+      processed: json['processed'] as bool? ?? false,
+      occurredAt: json['occurred_at'] != null
+          ? DateTime.parse(json['occurred_at'])
+          : null,
+      createdAt: DateTime.parse(json['created_at']),
+    );
+  }
+
+  WebhookEventType get mappedEventType => mapEventType(eventType);
+}
+
 /// Represents a single SMS log entry
 class SmsLogEntry {
   final String id;
@@ -37,6 +123,20 @@ class SmsLogEntry {
     required this.timestamp,
     required this.wilaya,
   });
+
+  factory SmsLogEntry.fromJson(Map<String, dynamic> json) {
+    return SmsLogEntry(
+      id: json['id'] as String,
+      customerName: json['customer_name'] as String? ?? 'Inconnu',
+      phoneNumber: json['phone_number'] as String? ?? '',
+      trackingId: json['tracking_id'] as String? ?? '',
+      eventType: mapEventType(json['event_type'] as String?),
+      smsStatus: mapSmsStatus(json['sms_status'] as String?),
+      messageContent: json['message_content'] as String? ?? '',
+      timestamp: DateTime.parse(json['created_at']),
+      wilaya: json['wilaya'] as String? ?? '',
+    );
+  }
 
   String get eventTypeLabel {
     switch (eventType) {
@@ -80,34 +180,40 @@ class SmsLogEntry {
   }
 }
 
-/// Represents SMS message templates
-class SmsTemplate {
-  final String id;
-  final String name;
-  final WebhookEventType eventType;
-  final String messageTemplate;
-  final bool isActive;
+/// Hardcoded SMS message templates
+class SmsTemplates {
+  static const Map<WebhookEventType, String> templates = {
+    WebhookEventType.outForDelivery:
+        'مرحبا {name}، طردك خرج للتسليم اليوم. يرجى تحضير المبلغ وإبقاء هاتفك مفتوحا، سيتصل بك السائق اليوم. رقم التتبع: {tracking}',
+    WebhookEventType.atWilaya:
+        'مرحبا {name}، طردك وصل للولاية. سنتصل بك قريبا. رقم التتبع: {tracking}',
+    WebhookEventType.delivered:
+        'مرحبا {name}، تم تسليم طردك بنجاح. شكرا لثقتك! إذا واجهت أي مشكلة تواصل معنا واترك تعليق إيجابي على صفحتنا للحصول على تخفيض في طلبك القادم. رقم التتبع: {tracking}',
+  };
 
-  const SmsTemplate({
-    required this.id,
-    required this.name,
-    required this.eventType,
-    required this.messageTemplate,
-    required this.isActive,
-  });
+  static const Map<WebhookEventType, String> templateNames = {
+    WebhookEventType.outForDelivery: 'Sorti en livraison',
+    WebhookEventType.atWilaya: 'Au centre (Wilaya)',
+    WebhookEventType.delivered: 'Livré',
+  };
 
-  SmsTemplate copyWith({
-    String? name,
-    String? messageTemplate,
-    bool? isActive,
+  /// Returns the SMS message for a given event type with placeholders filled
+  static String? buildMessage({
+    required WebhookEventType eventType,
+    required String customerName,
+    required String tracking,
   }) {
-    return SmsTemplate(
-      id: id,
-      name: name ?? this.name,
-      eventType: eventType,
-      messageTemplate: messageTemplate ?? this.messageTemplate,
-      isActive: isActive ?? this.isActive,
-    );
+    final template = templates[eventType];
+    if (template == null) return null; // No SMS for returned/unknown
+
+    return template
+        .replaceAll('{name}', customerName)
+        .replaceAll('{tracking}', tracking);
+  }
+
+  /// Whether this event type should trigger an SMS
+  static bool shouldSendSms(WebhookEventType eventType) {
+    return templates.containsKey(eventType);
   }
 }
 
@@ -116,13 +222,11 @@ class WebhookConfig {
   final String webhookUrl;
   final String apiToken;
   final bool isListening;
-  final int port;
 
   const WebhookConfig({
     required this.webhookUrl,
     required this.apiToken,
     required this.isListening,
-    this.port = 8080,
   });
 }
 

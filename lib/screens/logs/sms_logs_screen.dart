@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../core/theme/app_theme.dart';
-import '../../data/mock_data.dart';
+import '../../core/services/supabase_service.dart';
 import '../../models/models.dart';
 import '../../widgets/shared_widgets.dart';
 
@@ -15,6 +15,25 @@ class _SmsLogsScreenState extends State<SmsLogsScreen> {
   SmsStatus? _selectedFilter;
   WebhookEventType? _selectedEventFilter;
   final TextEditingController _searchController = TextEditingController();
+  List<SmsLogEntry> _allLogs = [];
+  bool _loading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadLogs();
+  }
+
+  Future<void> _loadLogs() async {
+    setState(() => _loading = true);
+    try {
+      final logs = await SupabaseService.fetchSmsLogs();
+      if (mounted) setState(() { _allLogs = logs; _loading = false; });
+    } catch (e) {
+      debugPrint('Error loading logs: $e');
+      if (mounted) setState(() => _loading = false);
+    }
+  }
 
   @override
   void dispose() {
@@ -23,7 +42,7 @@ class _SmsLogsScreenState extends State<SmsLogsScreen> {
   }
 
   List<SmsLogEntry> get filteredLogs {
-    var logs = MockData.recentLogs;
+    var logs = _allLogs;
     if (_selectedFilter != null) {
       logs = logs.where((l) => l.smsStatus == _selectedFilter).toList();
     }
@@ -209,19 +228,28 @@ class _SmsLogsScreenState extends State<SmsLogsScreen> {
         // SMS Log entries
         SliverPadding(
           padding: const EdgeInsets.fromLTRB(20, 4, 20, 100),
-          sliver: filteredLogs.isEmpty
-              ? SliverToBoxAdapter(
-                  child: _buildEmptyState(context),
-                )
-              : SliverList(
-                  delegate: SliverChildBuilderDelegate(
-                    (context, index) {
-                      final log = filteredLogs[index];
-                      return _buildLogCard(context, log);
-                    },
-                    childCount: filteredLogs.length,
+          sliver: _loading
+              ? const SliverToBoxAdapter(
+                  child: Center(
+                    child: Padding(
+                      padding: EdgeInsets.all(40),
+                      child: CircularProgressIndicator(color: AppColors.primary),
+                    ),
                   ),
-                ),
+                )
+              : filteredLogs.isEmpty
+                  ? SliverToBoxAdapter(
+                      child: _buildEmptyState(context),
+                    )
+                  : SliverList(
+                      delegate: SliverChildBuilderDelegate(
+                        (context, index) {
+                          final log = filteredLogs[index];
+                          return _buildLogCard(context, log);
+                        },
+                        childCount: filteredLogs.length,
+                      ),
+                    ),
         ),
       ],
     );

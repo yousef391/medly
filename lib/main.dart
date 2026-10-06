@@ -1,13 +1,37 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_foreground_task/flutter_foreground_task.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'core/theme/app_theme.dart';
+import 'core/services/sms_sender_service.dart';
+import 'core/services/webhook_listener_service.dart';
+import 'core/services/foreground_task_handler.dart';
 import 'screens/dashboard/dashboard_screen.dart';
 import 'screens/logs/sms_logs_screen.dart';
 import 'screens/templates/templates_screen.dart';
 import 'screens/settings/settings_screen.dart';
+import 'screens/auth/auth_screen.dart';
+import 'screens/auth/onboarding_screen.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
-void main() {
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  final prefs = await SharedPreferences.getInstance();
+  final hasSeenOnboarding = prefs.getBool('has_seen_onboarding') ?? false;
+
+  // Initialize Supabase (hardcoded for testing — move to config later)
+  await Supabase.initialize(
+    url: 'https://alrvuuoaqnbvkbwtizch.supabase.co',
+    publishableKey:
+        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFscnZ1dW9hcW5idmtid3RpemNoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE2MjMzNTIsImV4cCI6MjA5NzE5OTM1Mn0.wC_vCS1GEg8dPUZlkPecvAELfGFBCZAFBmZtf73OHgg',
+  );
+
+  // Initialize foreground task
+  FlutterForegroundTask.initCommunicationPort();
+  _initForegroundTask();
+
   SystemChrome.setSystemUIOverlayStyle(
     const SystemUiOverlayStyle(
       statusBarColor: Colors.transparent,
@@ -16,19 +40,54 @@ void main() {
       systemNavigationBarIconBrightness: Brightness.light,
     ),
   );
-  runApp(const SmsSenderApp());
+  runApp(SmsSenderApp(hasSeenOnboarding: hasSeenOnboarding));
+}
+
+void _initForegroundTask() {
+  FlutterForegroundTask.init(
+    androidNotificationOptions: AndroidNotificationOptions(
+      channelId: 'sms_sender_channel',
+      channelName: 'SMS Sender Service',
+      channelDescription: 'Écoute les notifications Yalidine et envoie les SMS',
+      channelImportance: NotificationChannelImportance.LOW,
+      priority: NotificationPriority.LOW,
+      playSound: false,
+      showWhen: false,
+    ),
+    iosNotificationOptions: const IOSNotificationOptions(),
+    foregroundTaskOptions: ForegroundTaskOptions(
+      eventAction: ForegroundTaskEventAction.repeat(60000), // heartbeat every 60s
+      autoRunOnBoot: true,
+      autoRunOnMyPackageReplaced: true,
+      allowWakeLock: true,
+      allowWifiLock: true,
+    ),
+  );
 }
 
 class SmsSenderApp extends StatelessWidget {
-  const SmsSenderApp({super.key});
+  final bool hasSeenOnboarding;
+  const SmsSenderApp({super.key, required this.hasSeenOnboarding});
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'SMS Sender - Yalidine',
+      title: 'Medly',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.darkTheme,
-      home: const MainShell(),
+      home: StreamBuilder<AuthState>(
+        stream: Supabase.instance.client.auth.onAuthStateChange,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Scaffold(body: Center(child: CircularProgressIndicator()));
+          }
+          final session = snapshot.hasData ? snapshot.data!.session : null;
+          if (session != null) {
+            return const MainShell();
+          }
+          return hasSeenOnboarding ? const AuthScreen() : const OnboardingScreen();
+        },
+      ),
     );
   }
 }
@@ -61,12 +120,44 @@ class _MainShellState extends State<MainShell> with TickerProviderStateMixin {
       duration: const Duration(milliseconds: 300),
     );
     _fabAnimationController.forward();
+    _initSmsListener();
+  }
+
+  Future<void> _initSmsListener() async {
+    // Wait a moment for the platform channels to be ready
+    await Future.delayed(const Duration(seconds: 1));
+    try {
+      // Request SMS permission
+      await SmsSenderService.requestSmsPermission();
+    } catch (e) {
+      debugPrint('SMS permission request failed: $e');
+    }
+
+    // Start the foreground service so app stays alive in background
+    await _startForegroundService();
+
+    // Start listening for webhook events
+    WebhookListenerService.startListening();
+  }
+
+  Future<void> _startForegroundService() async {
+    if (await FlutterForegroundTask.isRunningService) return;
+
+    await FlutterForegroundTask.requestNotificationPermission();
+    await FlutterForegroundTask.startService(
+      serviceId: 256,
+      notificationTitle: 'SMS Sender — En écoute',
+      notificationText: 'Écoute les mises à jour Yalidine',
+      notificationIcon: null,
+      callback: startCallback,
+    );
   }
 
   @override
   void dispose() {
     _pageController.dispose();
     _fabAnimationController.dispose();
+    WebhookListenerService.stopListening();
     super.dispose();
   }
 
@@ -104,24 +195,24 @@ class _MainShellState extends State<MainShell> with TickerProviderStateMixin {
   Widget _buildBottomNav(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: AppColors.surface.withValues(alpha: 0.95),
         border: Border(
           top: BorderSide(
-            color: Colors.white.withValues(alpha: 0.05),
+            color: Colors.white.withValues(alpha: 0.04),
             width: 1,
           ),
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.3),
-            blurRadius: 20,
-            offset: const Offset(0, -4),
+            color: Colors.black.withValues(alpha: 0.4),
+            blurRadius: 24,
+            offset: const Offset(0, -6),
           ),
         ],
       ),
       child: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: List.generate(_navItems.length, (index) {
@@ -140,17 +231,31 @@ class _MainShellState extends State<MainShell> with TickerProviderStateMixin {
       onTap: () => _onTabChanged(index),
       behavior: HitTestBehavior.opaque,
       child: AnimatedContainer(
-        duration: const Duration(milliseconds: 250),
-        curve: Curves.easeInOut,
+        duration: const Duration(milliseconds: 280),
+        curve: Curves.easeOutCubic,
         padding: EdgeInsets.symmetric(
-          horizontal: isSelected ? 16 : 12,
-          vertical: 8,
+          horizontal: isSelected ? 18 : 14,
+          vertical: 10,
         ),
         decoration: BoxDecoration(
-          color: isSelected
-              ? AppColors.primary.withValues(alpha: 0.12)
-              : Colors.transparent,
-          borderRadius: BorderRadius.circular(14),
+          gradient: isSelected
+              ? LinearGradient(
+                  colors: [
+                    AppColors.primary.withValues(alpha: 0.15),
+                    AppColors.primary.withValues(alpha: 0.05),
+                  ],
+                )
+              : null,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: isSelected
+              ? [
+                  BoxShadow(
+                    color: AppColors.primary.withValues(alpha: 0.15),
+                    blurRadius: 12,
+                    spreadRadius: -2,
+                  ),
+                ]
+              : null,
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
@@ -164,10 +269,11 @@ class _MainShellState extends State<MainShell> with TickerProviderStateMixin {
               const SizedBox(width: 8),
               Text(
                 item.label,
-                style: const TextStyle(
+                style: TextStyle(
                   color: AppColors.primary,
                   fontSize: 12,
-                  fontWeight: FontWeight.w600,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 0.2,
                 ),
               ),
             ],
