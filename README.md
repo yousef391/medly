@@ -1,33 +1,59 @@
-# Medly 🚀
+# 🚀 Medly
 
-**Medly** is an automated, background-running SMS campaign and notification manager built specifically for e-commerce sellers in Algeria using **Yalidine** for shipping. 
+**Medly** is an intelligent, background-running SMS automation app designed specifically for e-commerce sellers in Algeria who use **Yalidine** for logistics. 
 
-Medly bridges the gap between your logistics and your customers by utilizing your phone's native SMS capabilities, eliminating the need for expensive third-party SMS gateways.
-
-## 📱 How It Works (The Workflow)
-
-1. **User Registration:** You can easily register and create a new user account directly within the app.
-2. **API Connection:** Configure your Yalidine API credentials in the settings.
-3. **Background Webhooks:** Medly runs a continuous, optimized background service (using `flutter_foreground_task`) that listens for webhook events from the Yalidine API.
-4. **Trigger & Send:** Whenever a package status changes (e.g., "Out for delivery", "Ready for pickup", "Returned"), Yalidine pings your app. The app automatically pulls the correct custom SMS template, inserts the customer's name and tracking number, and sends an SMS directly from your device.
-
-## ✨ Key Features
-
-- **Dashboard:** A high-level overview of your automated campaigns, success rates, and SMS metrics.
-- **Logs:** A complete history of every SMS sent and its delivery status.
-- **Modèles (Templates):** Customizable dynamic SMS templates (e.g., *"Bonjour {{name}}, votre colis Yalidine {{tracking}} est arrivé !"*).
-- **Background Execution:** Fully operates in the background, minimizing battery usage while never missing an update.
+Whether you are a store owner looking to understand how this helps your business, or a developer looking to contribute, this guide explains everything you need to know.
 
 ---
 
-### ⚠️ Important Note
-**Medly must be connected to your store and the Yalidine API.** 
-For the automated SMS triggers to function properly, you must configure your API tokens in the settings and ensure your e-commerce platform/Yalidine account is actively pushing webhook updates to the app.
+## 📖 What is Medly? (For Store Owners & Non-Developers)
+
+Imagine having a personal assistant who constantly watches your Yalidine shipments, and the second a package goes out for delivery, they grab your phone and text the customer: *"Hello Ahmed, your package is arriving today!"* 
+
+**That is exactly what Medly does.** 
+
+Instead of paying for expensive bulk SMS services, Medly uses your Android phone's regular SIM card (and your standard SMS plan) to automatically send delivery updates to your customers. 
+
+### How to use Medly (Step-by-Step):
+1. **Create an Account:** You can register and create your user account directly inside the Medly app.
+2. **Connect Your Store/Yalidine:** **⚠️ CRITICAL STEP:** Medly *must* be connected to your Yalidine account or e-commerce store to function. You will do this by entering your Yalidine API tokens in the app's Settings menu.
+3. **Write Your Templates:** Go to the "Modèles" (Templates) tab and write what you want your texts to say. (e.g., *"Bonjour {{name}}, votre colis {{tracking}} est en route."*)
+4. **Let it Run:** Once set up, the app runs quietly in the background. When your store/Yalidine updates a tracking status, Medly wakes up and automatically sends the SMS to the customer from your phone.
 
 ---
 
-## 🛠 Tech Stack
-- **Framework:** Flutter / Dart
-- **Backend/Auth:** Supabase
-- **Background Services:** `flutter_foreground_task`
-- **UI/UX:** Custom dark-mode minimalist design
+## 🏗 Architecture & Technical Details (For Developers)
+
+Medly is built to be resilient, ensuring that webhooks are caught and SMS messages are dispatched even if the app is closed.
+
+### 1. Technology Stack
+* **Frontend:** Flutter (Dart). Chosen for rapid cross-platform UI development and deep native Android integrations.
+* **Backend as a Service (BaaS):** Supabase. Used for seamless user authentication (Auth), data storage (PostgreSQL), and handling incoming webhooks via Edge Functions.
+* **Background Processing:** `flutter_foreground_task`. This is the backbone of the app. It creates a persistent Android foreground service (with a low-priority notification) that keeps the Dart isolate alive to listen to real-time database updates from Supabase.
+* **Telephony:** The app requests `SEND_SMS` permissions to natively dispatch SMS messages via the Android Telephony manager without requiring the user to press "Send".
+
+### 2. The Data Workflow
+1. **Event Trigger:** A package status changes on Yalidine (e.g., from "Hub" to "Out for Delivery").
+2. **Webhook Reception:** Yalidine fires a webhook to a Supabase Edge Function.
+3. **Database Update:** Supabase validates the webhook and updates the `sms_queue` table in the PostgreSQL database.
+4. **Real-time Sync:** The Medly Android app, kept alive by `flutter_foreground_task`, maintains an active WebSocket connection to Supabase via `Supabase Realtime`.
+5. **Execution:** The app detects the new row in `sms_queue`, formats the text message using the user's saved templates, extracts the phone number, and fires the native Android SMS intent.
+6. **Logging:** The app updates the `sms_queue` status to `SENT` or `FAILED` so the user can view the outcome in the Logs screen.
+
+### 3. Project Structure
+* `lib/screens/`: Contains the modular UI screens (Dashboard, Logs, Templates, Settings, Auth).
+* `lib/core/services/`: Contains the heavy lifting logic:
+  * `foreground_task_handler.dart`: Manages the Android background service isolate.
+  * `webhook_listener_service.dart`: Manages the Supabase Realtime WebSocket connection.
+  * `sms_sender_service.dart`: Interfaces with Android native code to dispatch the SMS.
+* `lib/core/theme/`: Custom dark-mode UI design tokens, colors, and typography matching the premium branding.
+
+---
+
+## 🚀 Setup & Installation
+
+1. Clone the repository.
+2. Run `flutter pub get` to install dependencies.
+3. Ensure you have an active Supabase project. Add your Supabase URL and Anon Key to `lib/main.dart` (or your `.env` file).
+4. Run the app on a physical Android device (Emulators cannot send actual SMS messages): `flutter run`.
+5. Grant the required SMS and Notification permissions when prompted by the app.
