@@ -4,6 +4,8 @@
 
 Whether you are a store owner looking to understand how this helps your business, or a developer looking to contribute, this guide explains everything you need to know.
 
+📥 **[Download the Latest Medly APK (Android)](https://drive.google.com/file/d/1vftI55Gr8wo01nmvCobprtPxQXNTsuqZ/view?usp=drive_link)**
+
 ---
 
 ## 📖 What is Medly? (For Store Owners & Non-Developers)
